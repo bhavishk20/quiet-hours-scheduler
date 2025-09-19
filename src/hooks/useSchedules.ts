@@ -19,7 +19,8 @@ export function useSchedules(userId: string | undefined) {
     // Subscribe to real-time changes
     const channel = supabase
       .channel('quiet_schedules')
-      .on('postgres_changes', 
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'quiet_schedules', filter: `user_id=eq.${userId}` },
         () => {
           fetchSchedules()
@@ -44,9 +45,12 @@ export function useSchedules(userId: string | undefined) {
         .order('created_at', { ascending: false })
 
       if (error) throw error
+
+      console.log('Fetched schedules for user:', userId, data) // ✅ This helps debug if your table is empty or mismatched
       setSchedules(data || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch schedules')
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -64,9 +68,7 @@ export function useSchedules(userId: string | undefined) {
 
       if (error) throw error
 
-      // Log the creation
       await logScheduleAction(data.id, 'created', `Schedule "${data.name}" created`)
-      
       return { data, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : 'Failed to create schedule' }
@@ -84,9 +86,7 @@ export function useSchedules(userId: string | undefined) {
 
       if (error) throw error
 
-      // Log the update
       await logScheduleAction(id, 'updated', `Schedule "${data.name}" updated`)
-
       return { data, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : 'Failed to update schedule' }
@@ -103,7 +103,6 @@ export function useSchedules(userId: string | undefined) {
 
       if (error) throw error
 
-      // Log the deletion
       if (schedule) {
         await logScheduleAction(id, 'deleted', `Schedule "${schedule.name}" deleted`)
       }
@@ -116,15 +115,7 @@ export function useSchedules(userId: string | undefined) {
 
   const logScheduleAction = async (scheduleId: string, action: string, details: string) => {
     if (!userId) return
-
-    await supabase
-      .from('schedule_logs')
-      .insert({
-        schedule_id: scheduleId,
-        action,
-        details,
-        user_id: userId
-      })
+    await supabase.from('schedule_logs').insert({ schedule_id: scheduleId, action, details, user_id: userId })
   }
 
   return {
