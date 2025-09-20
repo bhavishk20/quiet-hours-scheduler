@@ -4,7 +4,7 @@ A **React + Supabase** web application to help users manage quiet hours schedule
 
 ---
 
-## **Features**
+## Features
 
 - Create and manage quiet hours schedules
 - Track schedules by day and time
@@ -17,7 +17,7 @@ A **React + Supabase** web application to help users manage quiet hours schedule
 
 ---
 
-## **Tech Stack**
+## Tech Stack
 
 - **Frontend:** React, TypeScript, Tailwind CSS
 - **Backend / Database:** Supabase (PostgreSQL + Realtime)
@@ -26,9 +26,9 @@ A **React + Supabase** web application to help users manage quiet hours schedule
 
 ---
 
-## **Setup / Local Development**
+## Setup / Local Development
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/bhavishk20/quiet-hours-scheduler
+   git clone https://github.com/<your-username>/quiet-hours-scheduler.git
    cd quiet-hours-scheduler
