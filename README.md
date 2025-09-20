@@ -30,5 +30,5 @@ A **React + Supabase** web application to help users manage quiet hours schedule
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/<your-username>/quiet-hours-scheduler.git
+   git clone https://github.com/bhavishk20/quiet-hours-scheduler
    cd quiet-hours-scheduler
