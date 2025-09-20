@@ -50,21 +50,27 @@ export default function Dashboard() {
   }
 
   const activeSchedules = schedules.filter(s => s.is_active)
+
   const currentlyActive = schedules.filter(s => {
     if (!s.is_active) return false
-    
+
     const now = new Date()
-    const currentDay = now.toLocaleLowerCase().slice(0, 3) + 'day'
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
     const currentTime = now.getHours() * 60 + now.getMinutes()
-    
+
+    if (!s.start_time || !s.end_time) return false
+
     const [startHours, startMinutes] = s.start_time.split(':').map(Number)
     const [endHours, endMinutes] = s.end_time.split(':').map(Number)
-    
+
     const startTime = startHours * 60 + startMinutes
     const endTime = endHours * 60 + endMinutes
-    
-    const dayMatch = s.days_of_week.some(day => day.includes(currentDay.slice(0, 3)))
-    
+
+    // ✅ Fixed: convert day to string before toLowerCase
+    const dayMatch = (s.days_of_week ?? []).some(day =>
+      currentDay.startsWith(String(day).toLowerCase().slice(0, 3))
+    )
+
     if (startTime > endTime) {
       return dayMatch && (currentTime >= startTime || currentTime <= endTime)
     } else {
@@ -84,7 +90,7 @@ export default function Dashboard() {
               </div>
               <h1 className="text-xl font-semibold text-gray-900">Quiet Hours Scheduler</h1>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <User className="h-4 w-4" />
