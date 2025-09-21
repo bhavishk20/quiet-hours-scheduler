@@ -1,82 +1,100 @@
-import React, { useState } from 'react'
-import { Plus, Moon, Settings, LogOut, User, Clock } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
-import { useSchedules } from '../hooks/useSchedules'
-import ScheduleForm from './ScheduleForm'
-import ScheduleCard from './ScheduleCard'
-import ActivityLog from './ActivityLog'
-import type { Database } from '../lib/supabase'
+import React, { useState, useEffect } from "react";
+import { Plus, Moon, Settings, LogOut, User, Clock } from "lucide-react";
+import { useAuthContext } from "../App";
+import { useSchedules } from "../hooks/useSchedules";
+import ScheduleForm from "./ScheduleForm";
+import ScheduleCard from "./ScheduleCard";
+import ActivityLog from "./ActivityLog";
+import type { Database } from "../lib/supabase";
 
-type QuietSchedule = Database['public']['Tables']['quiet_schedules']['Row']
+type QuietSchedule = Database["public"]["Tables"]["quiet_schedules"]["Row"];
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth()
-  const { schedules, loading, createSchedule, updateSchedule, deleteSchedule } = useSchedules(user?.id)
-  const [showForm, setShowForm] = useState(false)
-  const [editingSchedule, setEditingSchedule] = useState<QuietSchedule | undefined>()
+  const { user, signOut } = useAuthContext();
+  const { schedules, loading, createSchedule, updateSchedule, deleteSchedule } = useSchedules(user?.id);
+  const [showForm, setShowForm] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<QuietSchedule | undefined>();
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData: Partial<QuietSchedule>) => {
+    if (!user) return;
     try {
       if (editingSchedule) {
-        await updateSchedule(editingSchedule.id, formData)
+        const { error } = await updateSchedule(editingSchedule.id, formData);
+        if (error) throw new Error(error);
       } else {
-        await createSchedule(formData)
+        const { error } = await createSchedule(formData);
+        if (error) throw new Error(error);
       }
-      setShowForm(false)
-      setEditingSchedule(undefined)
-    } catch (error) {
-      console.error('Failed to save schedule:', error)
+      setShowForm(false);
+      setEditingSchedule(undefined);
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save schedule";
+      console.error(message, err);
+      setError(message);
     }
-  }
+  };
 
   const handleEdit = (schedule: QuietSchedule) => {
-    setEditingSchedule(schedule)
-    setShowForm(true)
-  }
+    setEditingSchedule(schedule);
+    setShowForm(true);
+  };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this schedule?')) {
-      await deleteSchedule(id)
+    if (!window.confirm("Are you sure you want to delete this schedule?")) return;
+    try {
+      const { error } = await deleteSchedule(id);
+      if (error) throw new Error(error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete schedule";
+      console.error(message, err);
+      setError(message);
     }
-  }
+  };
 
   const handleToggle = async (id: string, isActive: boolean) => {
-    await updateSchedule(id, { is_active: isActive })
-  }
+    try {
+      const { error } = await updateSchedule(id, { is_active: isActive });
+      if (error) throw new Error(error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to toggle schedule";
+      console.error(message, err);
+      setError(message);
+    }
+  };
 
   const handleCancel = () => {
-    setShowForm(false)
-    setEditingSchedule(undefined)
-  }
+    setShowForm(false);
+    setEditingSchedule(undefined);
+  };
 
-  const activeSchedules = schedules.filter(s => s.is_active)
+  const activeSchedules = schedules.filter((s) => s.is_active);
 
-  const currentlyActive = schedules.filter(s => {
-    if (!s.is_active) return false
+  // Check which schedules are currently active
+  const currentlyActive = schedules.filter((s) => {
+    if (!s.is_active || !s.start_time || !s.end_time || !s.days_of_week) return false;
+    try {
+      const now = new Date();
+      const weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      const currentDay = weekdays[now.getDay()];
+      const currentTime = now.getHours() * 60 + now.getMinutes();
 
-    const now = new Date()
-    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-    const currentTime = now.getHours() * 60 + now.getMinutes()
+      const [startH, startM] = s.start_time.split(":").map(Number);
+      const [endH, endM] = s.end_time.split(":").map(Number);
+      const startTime = startH * 60 + startM;
+      const endTime = endH * 60 + endM;
 
-    if (!s.start_time || !s.end_time) return false
+      const isToday = s.days_of_week.some((d) => d.toLowerCase().slice(0, 3) === currentDay);
+      if (!isToday) return false;
 
-    const [startHours, startMinutes] = s.start_time.split(':').map(Number)
-    const [endHours, endMinutes] = s.end_time.split(':').map(Number)
-
-    const startTime = startHours * 60 + startMinutes
-    const endTime = endHours * 60 + endMinutes
-
-    // ✅ Fixed: convert day to string before toLowerCase
-    const dayMatch = (s.days_of_week ?? []).some(day =>
-      currentDay.startsWith(String(day).toLowerCase().slice(0, 3))
-    )
-
-    if (startTime > endTime) {
-      return dayMatch && (currentTime >= startTime || currentTime <= endTime)
-    } else {
-      return dayMatch && currentTime >= startTime && currentTime <= endTime
+      return startTime > endTime
+        ? currentTime >= startTime || currentTime <= endTime
+        : currentTime >= startTime && currentTime <= endTime;
+    } catch {
+      return false;
     }
-  })
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-emerald-50">
@@ -137,8 +155,8 @@ export default function Dashboard() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className={`rounded-lg p-3 ${currentlyActive.length > 0 ? 'bg-amber-100' : 'bg-gray-100'}`}>
-                <Moon className={`h-6 w-6 ${currentlyActive.length > 0 ? 'text-amber-600' : 'text-gray-600'}`} />
+              <div className={`rounded-lg p-3 ${currentlyActive.length > 0 ? "bg-amber-100" : "bg-gray-100"}`}>
+                <Moon className={`h-6 w-6 ${currentlyActive.length > 0 ? "text-amber-600" : "text-gray-600"}`} />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">Currently Active</p>
@@ -205,20 +223,19 @@ export default function Dashboard() {
           </div>
 
           {/* Activity Log */}
-          <div className="lg:col-span-1">
-            {user && <ActivityLog userId={user.id} />}
-          </div>
+          <div className="lg:col-span-1">{user && <ActivityLog userId={user.id} />}</div>
         </div>
       </div>
 
       {/* Form Modal */}
-      {showForm && (
-        <ScheduleForm
-          schedule={editingSchedule}
-          onSave={handleSave}
-          onCancel={handleCancel}
-        />
+      {showForm && <ScheduleForm schedule={editingSchedule} onSave={handleSave} onCancel={handleCancel} />}
+
+      {/* Global Error Toast */}
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow cursor-pointer" onClick={() => setError(null)}>
+          {error}
+        </div>
       )}
     </div>
-  )
+  );
 }

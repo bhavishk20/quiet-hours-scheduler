@@ -12,27 +12,19 @@ export default function ActivityLog({ userId }: ActivityLogProps) {
 
   const getActionIcon = (action: string) => {
     switch (action) {
-      case 'created':
-        return <div className="w-2 h-2 bg-green-500 rounded-full" />
-      case 'updated':
-        return <div className="w-2 h-2 bg-blue-500 rounded-full" />
-      case 'deleted':
-        return <div className="w-2 h-2 bg-red-500 rounded-full" />
-      default:
-        return <div className="w-2 h-2 bg-gray-500 rounded-full" />
+      case 'created': return <div className="w-2 h-2 bg-green-500 rounded-full" />
+      case 'updated': return <div className="w-2 h-2 bg-blue-500 rounded-full" />
+      case 'deleted': return <div className="w-2 h-2 bg-red-500 rounded-full" />
+      default: return <div className="w-2 h-2 bg-gray-500 rounded-full" />
     }
   }
 
   const getActionColor = (action: string) => {
     switch (action) {
-      case 'created':
-        return 'text-green-700'
-      case 'updated':
-        return 'text-blue-700'
-      case 'deleted':
-        return 'text-red-700'
-      default:
-        return 'text-gray-700'
+      case 'created': return 'text-green-700'
+      case 'updated': return 'text-blue-700'
+      case 'deleted': return 'text-red-700'
+      default: return 'text-gray-700'
     }
   }
 
@@ -67,7 +59,11 @@ export default function ActivityLog({ userId }: ActivityLogProps) {
           <p className="text-gray-500 text-sm">No activity yet</p>
         ) : (
           logs.slice(0, 10).map((log) => (
-            <div key={log.id} className="flex items-start gap-3">
+            <div
+              key={log.id}
+              className="flex items-start gap-3"
+              aria-label={`${log.action} - ${log.details} - ${formatDistanceToNow(new Date(log.timestamp))} ago`}
+            >
               <div className="mt-2">
                 {getActionIcon(log.action)}
               </div>

@@ -4,9 +4,19 @@ import type { Database } from '../lib/supabase'
 
 type QuietSchedule = Database['public']['Tables']['quiet_schedules']['Row']
 
+type ScheduleFormData = {
+  name: string
+  description: string
+  start_time: string
+  end_time: string
+  days_of_week: string[]
+  is_active: boolean
+  email_notifications: boolean
+}
+
 interface ScheduleFormProps {
   schedule?: QuietSchedule
-  onSave: (schedule: any) => Promise<void>
+  onSave: (schedule: ScheduleFormData) => Promise<void>
   onCancel: () => void
 }
 
@@ -21,16 +31,17 @@ const DAYS_OF_WEEK = [
 ]
 
 export default function ScheduleForm({ schedule, onSave, onCancel }: ScheduleFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ScheduleFormData>({
     name: '',
     description: '',
     start_time: '22:00',
     end_time: '08:00',
-    days_of_week: [] as string[],
+    days_of_week: [],
     is_active: true,
     email_notifications: true
   })
   const [loading, setLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
     if (schedule) {
@@ -49,10 +60,18 @@ export default function ScheduleForm({ schedule, onSave, onCancel }: ScheduleFor
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (formData.days_of_week.length === 0) {
-      alert('Please select at least one day of the week')
+      setFormError('Please select at least one day of the week')
       return
     }
 
+    const [startH, startM] = formData.start_time.split(':').map(Number)
+    const [endH, endM] = formData.end_time.split(':').map(Number)
+    if (startH === endH && startM === endM) {
+      setFormError('Start and end time cannot be the same.')
+      return
+    }
+
+    setFormError(null)
     setLoading(true)
     try {
       await onSave(formData)
@@ -81,6 +100,7 @@ export default function ScheduleForm({ schedule, onSave, onCancel }: ScheduleFor
             <button
               onClick={onCancel}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Close form"
             >
               <X className="h-6 w-6 text-gray-600" />
             </button>
@@ -88,6 +108,8 @@ export default function ScheduleForm({ schedule, onSave, onCancel }: ScheduleFor
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {formError && <p className="text-red-600 text-sm">{formError}</p>}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Schedule Name
@@ -110,7 +132,7 @@ export default function ScheduleForm({ schedule, onSave, onCancel }: ScheduleFor
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              placeholder="Brief description of this quiet hours period"
+              placeholder="Brief description"
               rows={3}
             />
           </div>
@@ -151,7 +173,7 @@ export default function ScheduleForm({ schedule, onSave, onCancel }: ScheduleFor
               Days of Week
             </label>
             <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
-              {DAYS_OF_WEEK.map((day) => (
+              {DAYS_OF_WEEK.map(day => (
                 <button
                   key={day.id}
                   type="button"
@@ -161,6 +183,7 @@ export default function ScheduleForm({ schedule, onSave, onCancel }: ScheduleFor
                       ? 'bg-indigo-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  aria-pressed={formData.days_of_week.includes(day.id)}
                 >
                   <span className="hidden md:inline">{day.label}</span>
                   <span className="md:hidden">{day.short}</span>
