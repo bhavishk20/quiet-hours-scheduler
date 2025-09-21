@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase } from "../lib/supabase"
- // ✅ updated path
 import type { User } from '@supabase/supabase-js'
 
 export function useAuth() {
@@ -15,21 +14,28 @@ export function useAuth() {
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }
+    )
 
     return () => subscription.unsubscribe()
   }, [])
 
   const signUp = async (email: string, password: string) => {
+    const redirectUrl =
+      process.env.NODE_ENV === "production"
+        ? "https://quiet-hours-scheduler-omega.vercel.app"
+        : "http://localhost:5173"
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin
-      }
+        emailRedirectTo: redirectUrl,
+      },
     })
     return { data, error }
   }
@@ -37,7 +43,7 @@ export function useAuth() {
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     })
     return { data, error }
   }
@@ -49,9 +55,10 @@ export function useAuth() {
 
   return {
     user,
+    setUser,  // ✅ Added this so Auth.tsx can auto-update user
     loading,
     signUp,
     signIn,
-    signOut
+    signOut,
   }
 }

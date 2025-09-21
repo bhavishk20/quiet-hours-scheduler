@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Mail, Lock, User, LogIn, UserPlus } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabase'
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false)
@@ -8,8 +9,31 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  
-  const { signUp, signIn } = useAuth()
+
+  const { signUp, signIn, setUser } = useAuth()
+
+  // Auto-login on page load if session exists
+  useEffect(() => {
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setUser(session.user)
+        setMessage('✅ Logged in automatically!')
+      }
+    }
+    initAuth()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user)
+        setMessage('✅ Logged in automatically!')
+      }
+    })
+
+    return () => {
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,17 +41,19 @@ export default function Auth() {
     setMessage('')
 
     try {
-      const { error } = isSignUp 
+      const { error } = isSignUp
         ? await signUp(email, password)
         : await signIn(email, password)
 
       if (error) throw error
 
       if (isSignUp) {
-        setMessage('Check your email for verification link!')
+        setMessage('✅ Check your email for the verification link!')
+      } else {
+        setMessage('✅ Signed in successfully!')
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'An error occurred')
+      setMessage(err instanceof Error ? err.message : '❌ Something went wrong.')
     } finally {
       setLoading(false)
     }
@@ -44,7 +70,9 @@ export default function Auth() {
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
           <p className="text-gray-600">
-            {isSignUp ? 'Start managing your quiet hours' : 'Sign in to your quiet hours scheduler'}
+            {isSignUp
+              ? 'Start managing your quiet hours'
+              : 'Sign in to your quiet hours scheduler'}
           </p>
         </div>
 
@@ -84,11 +112,13 @@ export default function Auth() {
           </div>
 
           {message && (
-            <div className={`p-3 rounded-lg text-sm ${
-              message.includes('Check your email') 
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
+            <div
+              className={`p-3 rounded-lg text-sm ${
+                message.includes('✅')
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}
+            >
               {message}
             </div>
           )}
@@ -114,7 +144,9 @@ export default function Auth() {
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
             >
-              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+              {isSignUp
+                ? 'Already have an account? Sign In'
+                : "Don't have an account? Sign Up"}
             </button>
           </div>
         </form>
