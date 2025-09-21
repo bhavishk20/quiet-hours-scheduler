@@ -26,18 +26,15 @@ export default function ScheduleCard({ schedule, onEdit, onDelete, onToggle }: S
       const startTime = startHours * 60 + startMinutes;
       const endTime = endHours * 60 + endMinutes;
 
-      const dayMatch = schedule.days_of_week.some(day =>
-        day && day.toLowerCase().slice(0, 3) === currentDay
+      const dayMatch = schedule.days_of_week.some(
+        day => day?.toLowerCase().slice(0, 3) === currentDay
       );
 
       if (!dayMatch) return false;
 
-      if (startTime > endTime) {
-        // Overnight schedule (e.g., 22:00 - 06:00)
-        return currentTime >= startTime || currentTime <= endTime;
-      } else {
-        return currentTime >= startTime && currentTime <= endTime;
-      }
+      return startTime > endTime
+        ? currentTime >= startTime || currentTime <= endTime // overnight
+        : currentTime >= startTime && currentTime <= endTime;
     } catch (err) {
       console.error("Error calculating active schedule:", err);
       return false;
@@ -45,7 +42,9 @@ export default function ScheduleCard({ schedule, onEdit, onDelete, onToggle }: S
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between 
+                    hover:shadow-lg transition-shadow duration-200">
+      {/* Schedule Info */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900">{schedule.name}</h3>
         <p className="text-sm text-gray-600 flex items-center gap-1">
@@ -53,34 +52,40 @@ export default function ScheduleCard({ schedule, onEdit, onDelete, onToggle }: S
           {schedule.start_time} - {schedule.end_time}
         </p>
         <p className="text-sm text-gray-600">
-          Days: {schedule.days_of_week?.join(", ") ?? "N/A"}
+          Days: {schedule.days_of_week?.join(", ") || "N/A"}
         </p>
         {isCurrentlyActive() && (
-          <p className="text-xs text-emerald-600 font-medium mt-1">Currently Active</p>
+          <p className="text-xs text-emerald-600 font-medium mt-1 animate-pulse">
+            Currently Active
+          </p>
         )}
       </div>
 
+      {/* Action Buttons */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => onEdit(schedule)}
-          className="p-2 text-gray-600 hover:text-indigo-600 transition-colors"
+          aria-label="Edit schedule"
+          className="p-2 text-gray-600 hover:text-indigo-600 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <Edit className="h-5 w-5" />
         </button>
         <button
           onClick={() => onDelete(schedule.id)}
-          className="p-2 text-gray-600 hover:text-red-600 transition-colors"
+          aria-label="Delete schedule"
+          className="p-2 text-gray-600 hover:text-red-600 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
         >
           <Trash2 className="h-5 w-5" />
         </button>
         <button
           onClick={() => onToggle(schedule.id, !schedule.is_active)}
-          className="p-2 text-gray-600 hover:text-indigo-600 transition-colors"
+          aria-label={schedule.is_active ? "Deactivate schedule" : "Activate schedule"}
+          className="p-2 text-gray-600 hover:text-indigo-600 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           {schedule.is_active ? (
-            <ToggleRight className="h-5 w-5 text-indigo-600" />
+            <ToggleRight className="h-5 w-5 text-indigo-600 transition-transform duration-200" />
           ) : (
-            <ToggleLeft className="h-5 w-5" />
+            <ToggleLeft className="h-5 w-5 transition-transform duration-200" />
           )}
         </button>
       </div>
